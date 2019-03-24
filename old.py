@@ -4,6 +4,7 @@ import mss
 from IPython import embed
 from time import sleep
 from datetime import datetime
+
 mon = {"top": 0, "left": 0, "width": 800, "height": 900}
 
 LEFT_BRANCH = {
@@ -54,17 +55,17 @@ def playable():
 
 def orchestrator():
     sleep(3)
-    img = sct.grab(mon)
+    image = sct.grab(mon)
 
     coords = []
 
     for index in range(4):
         coords.append(
             (
-                img.pixel(LEFT_BRANCH['x'], LEFT_BRANCH['y'] -
-                          (index * 100)) == LEFT_BRANCH['color'],
-                img.pixel(RIGHT_BRANCH['x'], RIGHT_BRANCH['y'] -
-                          (index * 100)) == RIGHT_BRANCH['color']
+                image.pixel(LEFT_BRANCH['x'], LEFT_BRANCH['y'] -
+                            (index * 100)) == LEFT_BRANCH['color'],
+                image.pixel(RIGHT_BRANCH['x'], RIGHT_BRANCH['y'] -
+                            (index * 100)) == RIGHT_BRANCH['color']
             )
         )
 
@@ -80,7 +81,7 @@ sleep(1)
 while True:
     coords = orchestrator()
 
-    for c in coords: 
+    for c in coords:
         print(c)
 
     sleep(10)

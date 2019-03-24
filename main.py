@@ -4,46 +4,54 @@ import mss
 from IPython import embed
 from time import sleep
 from datetime import datetime
-mon = {"top": 0, "left": 0, "width": 100, "height": 100}
+
+# Monitor specifications
+
+monitor = {
+    "top": 0,
+    "left": 0,
+    "width": 683,
+    "height": 767
+}
+
+# MSS global instance
+
+sct = mss.mss()
+
+
+# Constants
 
 LEFT_BRANCH = {
-    'x': 342,
-    'y': 465,
+    'x': 286,
+    'y': 334,
     'color': (161, 116, 56),
 }
 
 RIGHT_BRANCH = {
-    'x': 457,
-    'y': 465,
+    'x': 400,
+    'y': 333,
     'color': (161, 116, 56),
 }
 
-LEFT_ARROW = {
-    'x': 318,
-    'y': 755,
-    'color': (161, 116, 56),
-}
-
-RIGHT_ARROW = {
-    'x': 481,
-    'y': 755,
-    'color': (161, 116, 56),
-}
+LEFT_ARROW = 'left'
+RIGHT_ARROW = 'right'
 
 RELOAD_POSITION = {
-    'x': 394,
-    'y': 755,
+    'x': 339,
+    'y': 627,
     'color': (198, 151, 91),
 }
 
-sct = mss.mss()
 
-def pixelMatchesColor(x, y, color=()):
-    mon['top'] = y - 1
-    mon['left'] = x - 1
-    img = sct.grab(mon)
-    mss.tools.to_png(img.rgb, img.size, output="nada.png")
-    return img.pixel(5, 0) == color
+def pixelMatchesColor(x, y, color=(), image=None):
+    if not image:
+        image = sct.grab(monitor)
+
+    mss.tools.to_png(image.rgb, image.size, output="nada.png")
+
+    print(image.pixel(x, y))
+
+    return image.pixel(x, y) == color
 
 
 def playable():
@@ -54,48 +62,51 @@ def playable():
     )
 
 
-def orchestrator(last_choice=(LEFT_ARROW['x'], LEFT_ARROW['y'])):
+def orchestrator(last_choice=LEFT_ARROW):
+    image = sct.grab(monitor)
+
     has_left_branch = pixelMatchesColor(
         LEFT_BRANCH['x'],
         LEFT_BRANCH['y'],
-        LEFT_BRANCH['color']
+        LEFT_BRANCH['color'],
+        image
     )
 
     if has_left_branch:
         print('RIGHT')
-        return (RIGHT_ARROW['x'], RIGHT_ARROW['y'])
+        return RIGHT_ARROW
 
     has_right_branch = pixelMatchesColor(
         RIGHT_BRANCH['x'],
         RIGHT_BRANCH['y'],
-        RIGHT_BRANCH['color']
+        RIGHT_BRANCH['color'],
+        image
     )
 
     if has_right_branch:
         print('LEFT')
-        return (LEFT_ARROW['x'], LEFT_ARROW['y'])
+        return LEFT_ARROW
 
-    if not has_left_branch and not has_right_branch:
-        print('LAST CHOICE')
-        return last_choice
+    return last_choice
 
 
 sleep(3)
 
-last_orchestrator_choice = (LEFT_ARROW['x'], LEFT_ARROW['y'])
+last_orchestrator_choice = LEFT_ARROW
 
 count = 0
 
 while True:
-    print(datetime.now())
-    x, y = orchestrator(last_orchestrator_choice)
+    command = orchestrator(last_orchestrator_choice)
 
-    sleep(0.5)
-    pyautogui.click(x, y)
-    print(datetime.now())
+    sleep(0.1)
 
-    last_orchestrator_choice = (x, y)
+    pyautogui.press(command)
 
-    # if count % 10 == 0: 
-    #     if not playable(): 
-    #         break
+    last_orchestrator_choice = command
+
+    if count % 10 == 0:
+        if not playable():
+            break
+
+    count += 1
