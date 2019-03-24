@@ -5,43 +5,49 @@ from IPython import embed
 from time import sleep
 from datetime import datetime
 
-mon = {"top": 0, "left": 0, "width": 800, "height": 900}
+# Monitor specifications
+
+monitor = {
+    "top": 0,
+    "left": 0,
+    "width": 683,
+    "height": 767
+}
+
+# MSS global instance
+
+sct = mss.mss()
+
+
+# Constants
+BRANCH_OFFSET = 33.5
 
 LEFT_BRANCH = {
-    'x': 342,
-    'y': 465,
+    'x': 307,
+    'y': int(468 + BRANCH_OFFSET),
     'color': (161, 116, 56),
 }
 
 RIGHT_BRANCH = {
-    'x': 457,
-    'y': 465,
-    'color': (161, 116, 56),
-}
-
-LEFT_ARROW = {
-    'x': 318,
-    'y': 755,
-    'color': (161, 116, 56),
-}
-
-RIGHT_ARROW = {
-    'x': 481,
-    'y': 755,
+    'x': 382,
+    'y': int(468 + BRANCH_OFFSET),
     'color': (161, 116, 56),
 }
 
 RELOAD_POSITION = {
-    'x': 394,
-    'y': 755,
+    'x': 345,
+    'y': 662,
     'color': (198, 151, 91),
 }
+
+LEFT_ARROW = 'left'
+RIGHT_ARROW = 'right'
 
 sct = mss.mss()
 
 
 def pixelMatchesColor(x, y, color=()):
-    img = sct.grab(mon)
+    img = sct.grab(monitor)
     return img.pixel(x, y) == color
 
 
@@ -54,18 +60,21 @@ def playable():
 
 
 def orchestrator():
-    sleep(3)
-    image = sct.grab(mon)
+    sleep(.15)
+    image = sct.grab(monitor)
 
     coords = []
 
-    for index in range(4):
+    for index in range(12):
+        left_arrow_y = int(LEFT_BRANCH['y'] - (index * BRANCH_OFFSET))
+        right_arrow_y = int(RIGHT_BRANCH['y'] - (index * BRANCH_OFFSET))
+
         coords.append(
             (
-                image.pixel(LEFT_BRANCH['x'], LEFT_BRANCH['y'] -
-                            (index * 100)) == LEFT_BRANCH['color'],
-                image.pixel(RIGHT_BRANCH['x'], RIGHT_BRANCH['y'] -
-                            (index * 100)) == RIGHT_BRANCH['color']
+                image.pixel(LEFT_BRANCH['x'],
+                            left_arrow_y) == LEFT_BRANCH['color'],
+                image.pixel(RIGHT_BRANCH['x'],
+                            right_arrow_y) == RIGHT_BRANCH['color']
             )
         )
 
@@ -75,33 +84,56 @@ def orchestrator():
 sleep(3)
 count = 0
 
-pyautogui.click(LEFT_ARROW['x'], LEFT_ARROW['y'])
-sleep(1)
+last_choice = LEFT_ARROW
 
 while True:
     coords = orchestrator()
 
     for c in coords:
-        print(c)
+        c = map(lambda x: 'BRANCH' if x else 'FREE', c)
+        print(list(c))
 
-    sleep(10)
-    for (has_left_branch, has_right_branch) in coords:
-        count += 1
+    commands = []
+    for coord_index in range(len(coords) - 1):
+        current_positon_left_branch, current_positon_right_branch = coords[coord_index]
+        next_positon_left_branch, next_positon_right_branch = coords[coord_index + 1]
 
-        if count % 5 == 0:
-            if not playable():
-                break
+        print(current_positon_left_branch, current_positon_right_branch)
+        print(next_positon_left_branch, next_positon_right_branch)
+        
+        # ['FREE', 'FREE']
+        # ['FREE', 'FREE']
+        if not current_positon_left_branch and not current_positon_right_branch and not next_positon_left_branch and not next_positon_right_branch:
+            print('left')
+            commands.append(LEFT_ARROW)
+            pyautogui.press(LEFT_ARROW)
 
-        print()
-        if has_left_branch:
-            print(has_left_branch, has_right_branch, '-- right')
-            pyautogui.click(RIGHT_ARROW['x'], RIGHT_ARROW['y'])
-            continue
+        # ['BRANCH', 'FREE']
+        # ['FREE', 'FREE']
+        if current_positon_left_branch and not current_positon_right_branch and not next_positon_left_branch and not next_positon_right_branch:
+            print('right')
+            commands.append(RIGHT_ARROW)
+            pyautogui.press(RIGHT_ARROW)
 
-        if has_right_branch:
-            print(has_left_branch, has_right_branch, '-- left')
-            pyautogui.click(LEFT_ARROW['x'], LEFT_ARROW['y'])
-            continue
+        # ['FREE', 'FREE']
+        # ['BRANCH', 'FREE']
+        if not current_positon_left_branch and not current_positon_right_branch and next_positon_left_branch and not next_positon_right_branch:
+            print('right')
+            commands.append(RIGHT_ARROW)
+            pyautogui.press(RIGHT_ARROW)
 
-        print(has_left_branch, has_right_branch, '-- left [auto]')
-        pyautogui.click(LEFT_ARROW['x'], LEFT_ARROW['y'])
+        # ['FREE', 'BRANCH']
+        # ['FREE', 'FREE']
+        if not current_positon_left_branch and current_positon_right_branch and not next_positon_left_branch and not next_positon_right_branch:
+            print('left')
+            commands.append(LEFT_ARROW)
+            pyautogui.press(LEFT_ARROW)
+
+        # ['FREE', 'FREE']
+        # ['FREE', 'BRANCH']
+        if (not current_positon_left_branch and not current_positon_right_branch and not next_positon_left_branch and next_positon_right_branch):
+            print('left')
+            commands.append(LEFT_ARROW)
+            pyautogui.press(LEFT_ARROW)
+
+    # pyautogui.press(commands, pause=True, interval=1)
